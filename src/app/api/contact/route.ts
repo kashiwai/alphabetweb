@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import path from 'path'
 
 // お問い合わせデータの型定義
 interface ContactData {
@@ -12,6 +10,10 @@ interface ContactData {
   timestamp: string
   ipAddress?: string
 }
+
+// Vercel環境では、実際のデータ保存は外部サービス（Vercel KV、Supabase等）を使用してください
+// ここでは、デモ用にメモリ内配列を使用（サーバー再起動でリセットされます）
+let contacts: ContactData[] = []
 
 export async function POST(request: Request) {
   try {
@@ -47,32 +49,59 @@ export async function POST(request: Request) {
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
     }
 
-    // データ保存先のパスを設定（プロジェクトルートの data フォルダ）
-    const dataDir = path.join(process.cwd(), 'data')
-    const filePath = path.join(dataDir, 'contacts.json')
+    // Vercel環境かどうかを確認
+    const isVercel = process.env.VERCEL === '1'
+    
+    if (isVercel) {
+      // Vercel環境の場合
+      // オプション1: コンソールログに記録（Vercelのログで確認可能）
+      console.log('New contact submission:', JSON.stringify(contactData, null, 2))
+      
+      // オプション2: 外部サービスに送信（例：Discord Webhook、Slack、Email API等）
+      // await sendToExternalService(contactData)
+      
+      // オプション3: Vercel KVやSupabaseなどのデータベースに保存
+      // await saveToDatabase(contactData)
+      
+      // メモリに保存（一時的）
+      contacts.push(contactData)
+    } else {
+      // ローカル開発環境の場合
+      try {
+        const { promises: fs } = await import('fs')
+        const path = await import('path')
+        
+        const dataDir = path.join(process.cwd(), 'data')
+        const filePath = path.join(dataDir, 'contacts.json')
 
-    // data ディレクトリが存在しない場合は作成
-    try {
-      await fs.access(dataDir)
-    } catch {
-      await fs.mkdir(dataDir, { recursive: true })
+        // data ディレクトリが存在しない場合は作成
+        try {
+          await fs.access(dataDir)
+        } catch {
+          await fs.mkdir(dataDir, { recursive: true })
+        }
+
+        // 既存のデータを読み込む
+        let localContacts: ContactData[] = []
+        try {
+          const fileContent = await fs.readFile(filePath, 'utf-8')
+          localContacts = JSON.parse(fileContent)
+        } catch {
+          localContacts = []
+        }
+
+        // 新しいお問い合わせを追加
+        localContacts.push(contactData)
+
+        // ファイルに保存
+        await fs.writeFile(filePath, JSON.stringify(localContacts, null, 2))
+        contacts = localContacts
+      } catch (error) {
+        console.error('Failed to save to file:', error)
+        // ファイル保存に失敗してもメモリには保存
+        contacts.push(contactData)
+      }
     }
-
-    // 既存のデータを読み込む
-    let contacts: ContactData[] = []
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8')
-      contacts = JSON.parse(fileContent)
-    } catch {
-      // ファイルが存在しない場合は空の配列から開始
-      contacts = []
-    }
-
-    // 新しいお問い合わせを追加
-    contacts.push(contactData)
-
-    // ファイルに保存
-    await fs.writeFile(filePath, JSON.stringify(contacts, null, 2))
 
     // 成功レスポンスを返す
     return NextResponse.json({
@@ -102,23 +131,39 @@ export async function GET(request: Request) {
       )
     }
 
-    const filePath = path.join(process.cwd(), 'data', 'contacts.json')
+    // Vercel環境かどうかを確認
+    const isVercel = process.env.VERCEL === '1'
     
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8')
-      const contacts = JSON.parse(fileContent)
-      
+    if (isVercel) {
+      // Vercel環境の場合はメモリから返す
       return NextResponse.json({
         success: true,
-        contacts,
-        total: contacts.length
+        contacts: contacts,
+        total: contacts.length,
+        note: 'Data is stored temporarily in memory. For production, use a database service.'
       })
-    } catch {
-      return NextResponse.json({
-        success: true,
-        contacts: [],
-        total: 0
-      })
+    } else {
+      // ローカル環境の場合はファイルから読み込む
+      try {
+        const { promises: fs } = await import('fs')
+        const path = await import('path')
+        const filePath = path.join(process.cwd(), 'data', 'contacts.json')
+        
+        const fileContent = await fs.readFile(filePath, 'utf-8')
+        const localContacts = JSON.parse(fileContent)
+        
+        return NextResponse.json({
+          success: true,
+          contacts: localContacts,
+          total: localContacts.length
+        })
+      } catch {
+        return NextResponse.json({
+          success: true,
+          contacts: [],
+          total: 0
+        })
+      }
     }
 
   } catch (error) {
@@ -127,5 +172,33 @@ export async function GET(request: Request) {
       { error: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
+  }
+}
+
+// Discord Webhookに送信する例（オプション）
+async function sendToDiscordWebhook(data: ContactData) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [{
+          title: '新しいお問い合わせ',
+          color: 0x0099ff,
+          fields: [
+            { name: 'お名前', value: data.name, inline: true },
+            { name: 'メール', value: data.email, inline: true },
+            { name: '会社名', value: data.company, inline: true },
+            { name: 'メッセージ', value: data.message },
+            { name: '送信日時', value: new Date(data.timestamp).toLocaleString('ja-JP') }
+          ]
+        }]
+      })
+    })
+  } catch (error) {
+    console.error('Discord webhook error:', error)
   }
 }
