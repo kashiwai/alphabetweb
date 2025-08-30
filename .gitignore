@@ -37,4 +37,4 @@ next-env.d.ts
 
 # data (contact form submissions)
 /data/
-*.json
+/data/*.json
