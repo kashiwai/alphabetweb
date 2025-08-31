@@ -22,6 +22,24 @@ export default function AdminContacts() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const router = useRouter()
 
+  // ナビゲーションメニュー
+  const navigationMenu = (
+    <div className="mb-6 flex gap-4">
+      <button
+        onClick={() => router.push('/admin/contacts')}
+        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
+      >
+        お問い合わせ管理
+      </button>
+      <button
+        onClick={() => router.push('/admin/invoices')}
+        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+      >
+        請求書管理
+      </button>
+    </div>
+  )
+
   // 簡易認証（本番環境では適切な認証システムを使用してください）
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,6 +167,7 @@ export default function AdminContacts() {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {navigationMenu}
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-center">
