@@ -194,9 +194,14 @@ export default function InvoicesAdmin() {
   }
 
   // 編集モーダルで保存
-  const handleEditSave = (updatedInvoice: Invoice) => {
+  const handleEditSave = (updatedInvoice: any) => {
+    const fullInvoice: Invoice = {
+      ...updatedInvoice,
+      createdAt: editingInvoice?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
     setInvoices(invoices.map(inv => 
-      inv.id === updatedInvoice.id ? updatedInvoice : inv
+      inv.id === fullInvoice.id ? fullInvoice : inv
     ))
     setEditingInvoice(null)
   }

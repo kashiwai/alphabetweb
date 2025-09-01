@@ -1,0 +1,115 @@
+{
+  "name": "company-website-builder",
+  "version": "1.0.0",
+  "description": "Complete company website builder with invoice, email, and database systems",
+  "author": "Kotaro Kashiwai",
+  "triggers": [
+    "新規会社のHP作成",
+    "会社のホームページを作る",
+    "企業サイト構築",
+    "コーポレートサイト作成",
+    "company website",
+    "corporate website"
+  ],
+  "features": {
+    "website": {
+      "framework": "Next.js 15.5.0",
+      "styling": "Tailwind CSS",
+      "language": "TypeScript",
+      "deployment": "Vercel"
+    },
+    "invoice_system": {
+      "pdf_generation": "React PDF",
+      "japanese_support": true,
+      "features": ["請求書", "見積書", "編集機能", "ステータス管理"]
+    },
+    "email_system": {
+      "sending": "Resend",
+      "receiving": "ImprovMX",
+      "custom_domain": true,
+      "dns_records": ["SPF", "DKIM", "DMARC", "MX"]
+    },
+    "database": {
+      "provider": "Turso (SQLite Cloud)",
+      "free_tier": true
+    },
+    "admin_panel": {
+      "authentication": true,
+      "sections": ["contacts", "invoices", "estimates"]
+    }
+  },
+  "setup_steps": [
+    {
+      "step": 1,
+      "name": "Project initialization",
+      "commands": [
+        "npx create-next-app@latest {{company_name}} --typescript --tailwind --app",
+        "cd {{company_name}}",
+        "npm install @react-pdf/renderer resend @libsql/client date-fns"
+      ]
+    },
+    {
+      "step": 2,
+      "name": "Copy template files",
+      "files": [
+        "src/components/*",
+        "src/app/api/*",
+        "src/app/admin/*",
+        "src/lib/*"
+      ]
+    },
+    {
+      "step": 3,
+      "name": "Environment setup",
+      "env_variables": [
+        "ADMIN_API_KEY",
+        "TURSO_DATABASE_URL",
+        "TURSO_AUTH_TOKEN",
+        "RESEND_API_KEY",
+        "EMAIL_FROM"
+      ]
+    },
+    {
+      "step": 4,
+      "name": "DNS configuration",
+      "records": [
+        "SPF: v=spf1 include:amazonses.com include:spf.improvmx.com ~all",
+        "MX: mx1.improvmx.com (10), mx2.improvmx.com (20)",
+        "DKIM: Configure via Resend dashboard",
+        "DMARC: v=DMARC1; p=none;"
+      ]
+    },
+    {
+      "step": 5,
+      "name": "Deploy to Vercel",
+      "commands": [
+        "git init",
+        "git add -A",
+        "git commit -m 'Initial company website'",
+        "vercel --prod"
+      ]
+    }
+  ],
+  "customization": {
+    "company_info": {
+      "name": "{{company_name}}",
+      "address": "{{company_address}}",
+      "industry": "{{industry}}",
+      "services": "{{services}}"
+    },
+    "color_scheme": {
+      "primary": "#4f46e5",
+      "secondary": "#764ba2"
+    },
+    "email_aliases": [
+      "info@{{domain}}",
+      "ceo@{{domain}}",
+      "support@{{domain}}"
+    ]
+  },
+  "documentation": {
+    "setup_guide": "SETUP_GUIDE.md",
+    "api_reference": "API_REFERENCE.md",
+    "customization": "CUSTOMIZATION.md"
+  }
+}

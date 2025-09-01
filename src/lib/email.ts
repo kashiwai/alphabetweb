@@ -17,7 +17,7 @@ const createTransporter = () => {
 
   // SendGrid SMTP設定（代替）
   if (process.env.SENDGRID_API_KEY) {
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       host: 'smtp.sendgrid.net',
       port: 587,
       auth: {
@@ -29,7 +29,7 @@ const createTransporter = () => {
 
   // Gmail SMTP設定（開発用）
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.GMAIL_USER,
