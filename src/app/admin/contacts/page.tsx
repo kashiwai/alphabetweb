@@ -37,6 +37,12 @@ export default function AdminContacts() {
       >
         請求書管理
       </button>
+      <button
+        onClick={() => router.push('/admin/estimates')}
+        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+      >
+        見積書管理
+      </button>
     </div>
   )
 

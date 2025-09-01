@@ -4,42 +4,40 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { generateInvoicePDF } from '@/lib/pdfGenerator'
-import InvoiceEditModal from '@/components/InvoiceEditModal'
+import { generateEstimatePDF } from '@/lib/pdfGenerator'
 
-interface InvoiceItem {
+interface EstimateItem {
   description: string
   quantity: number
   unitPrice: number
   amount?: number
 }
 
-interface Invoice {
+interface Estimate {
   id: string
-  invoiceNumber: string
+  estimateNumber: string
   issueDate: string
-  dueDate: string
+  validUntil: string
   clientName: string
   clientAddress: string
   clientEmail?: string
-  items: InvoiceItem[]
+  items: EstimateItem[]
   subtotal: number
   tax: number
   total: number
   notes?: string
-  status: 'draft' | 'sent' | 'paid' | 'overdue'
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
   createdAt: string
   updatedAt: string
 }
 
-export default function InvoicesAdmin() {
+export default function EstimatesAdmin() {
   const router = useRouter()
-  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [estimates, setEstimates] = useState<Estimate[]>([])
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false)
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [showNewEstimateForm, setShowNewEstimateForm] = useState(false)
   
   // ナビゲーションメニュー
   const navigationMenu = (
@@ -52,25 +50,25 @@ export default function InvoicesAdmin() {
       </button>
       <button
         onClick={() => router.push('/admin/invoices')}
-        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
+        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
       >
         請求書管理
       </button>
       <button
         onClick={() => router.push('/admin/estimates')}
-        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition"
       >
         見積書管理
       </button>
     </div>
   )
 
-  // 新規請求書フォームの状態
-  const [newInvoice, setNewInvoice] = useState({
+  // 新規見積書フォームの状態
+  const [newEstimate, setNewEstimate] = useState({
     clientName: '',
     clientAddress: '',
     clientEmail: '',
-    dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    validUntil: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     items: [{ description: '', quantity: 1, unitPrice: 0 }],
     notes: ''
   })
@@ -80,95 +78,95 @@ export default function InvoicesAdmin() {
     e.preventDefault()
     if (password === 'admin123') {
       setIsAuthenticated(true)
-      fetchInvoices()
+      fetchEstimates()
     } else {
       alert('パスワードが正しくありません')
     }
   }
 
-  // 請求書一覧を取得
-  const fetchInvoices = async () => {
+  // 見積書一覧を取得
+  const fetchEstimates = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/invoice', {
+      const response = await fetch('/api/estimate', {
         headers: {
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'dev-api-key'}`
         }
       })
       const data = await response.json()
       if (data.success) {
-        setInvoices(data.invoices)
+        setEstimates(data.estimates)
       }
     } catch (error) {
-      console.error('Failed to fetch invoices:', error)
+      console.error('Failed to fetch estimates:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // 請求書項目を追加
-  const addInvoiceItem = () => {
-    setNewInvoice({
-      ...newInvoice,
-      items: [...newInvoice.items, { description: '', quantity: 1, unitPrice: 0 }]
+  // 見積書項目を追加
+  const addEstimateItem = () => {
+    setNewEstimate({
+      ...newEstimate,
+      items: [...newEstimate.items, { description: '', quantity: 1, unitPrice: 0 }]
     })
   }
 
-  // 請求書項目を削除
-  const removeInvoiceItem = (index: number) => {
-    setNewInvoice({
-      ...newInvoice,
-      items: newInvoice.items.filter((_, i) => i !== index)
+  // 見積書項目を削除
+  const removeEstimateItem = (index: number) => {
+    setNewEstimate({
+      ...newEstimate,
+      items: newEstimate.items.filter((_, i) => i !== index)
     })
   }
 
-  // 請求書項目を更新
-  const updateInvoiceItem = (index: number, field: string, value: any) => {
-    const updatedItems = [...newInvoice.items]
+  // 見積書項目を更新
+  const updateEstimateItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...newEstimate.items]
     updatedItems[index] = { ...updatedItems[index], [field]: value }
-    setNewInvoice({ ...newInvoice, items: updatedItems })
+    setNewEstimate({ ...newEstimate, items: updatedItems })
   }
 
-  // 請求書を作成
-  const createInvoice = async (e: React.FormEvent) => {
+  // 見積書を作成
+  const createEstimate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
-      const response = await fetch('/api/invoice', {
+      const response = await fetch('/api/estimate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'dev-api-key'}`
         },
-        body: JSON.stringify(newInvoice)
+        body: JSON.stringify(newEstimate)
       })
       const data = await response.json()
       if (data.success) {
-        alert('請求書を作成しました')
-        setShowNewInvoiceForm(false)
-        fetchInvoices()
+        alert('見積書を作成しました')
+        setShowNewEstimateForm(false)
+        fetchEstimates()
         // フォームをリセット
-        setNewInvoice({
+        setNewEstimate({
           clientName: '',
           clientAddress: '',
           clientEmail: '',
-          dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+          validUntil: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
           items: [{ description: '', quantity: 1, unitPrice: 0 }],
           notes: ''
         })
       }
     } catch (error) {
-      console.error('Failed to create invoice:', error)
-      alert('請求書の作成に失敗しました')
+      console.error('Failed to create estimate:', error)
+      alert('見積書の作成に失敗しました')
     } finally {
       setLoading(false)
     }
   }
 
   // ステータスを更新
-  const updateInvoiceStatus = async (id: string, status: string) => {
+  const updateEstimateStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch('/api/invoice', {
+      const response = await fetch('/api/estimate', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -178,34 +176,56 @@ export default function InvoicesAdmin() {
       })
       const data = await response.json()
       if (data.success) {
-        fetchInvoices()
+        fetchEstimates()
       }
     } catch (error) {
-      console.error('Failed to update invoice:', error)
+      console.error('Failed to update estimate:', error)
     }
   }
 
+  // 請求書に変換
+  const convertToInvoice = async (estimate: Estimate) => {
+    if (confirm('この見積書を請求書に変換しますか？')) {
+      try {
+        const response = await fetch('/api/invoice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY || 'dev-api-key'}`
+          },
+          body: JSON.stringify({
+            clientName: estimate.clientName,
+            clientAddress: estimate.clientAddress,
+            clientEmail: estimate.clientEmail,
+            items: estimate.items,
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            notes: `見積書番号 ${estimate.estimateNumber} から作成`
+          })
+        })
+        const data = await response.json()
+        if (data.success) {
+          alert('請求書を作成しました')
+          router.push('/admin/invoices')
+        }
+      } catch (error) {
+        console.error('Failed to convert to invoice:', error)
+        alert('請求書への変換に失敗しました')
+      }
+    }
+  }
 
   // 小計を計算
   const calculateSubtotal = () => {
-    return newInvoice.items.reduce((sum, item) => {
+    return newEstimate.items.reduce((sum, item) => {
       return sum + (item.quantity * item.unitPrice)
     }, 0)
-  }
-
-  // 編集モーダルで保存
-  const handleEditSave = (updatedInvoice: Invoice) => {
-    setInvoices(invoices.map(inv => 
-      inv.id === updatedInvoice.id ? updatedInvoice : inv
-    ))
-    setEditingInvoice(null)
   }
 
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">請求書管理画面</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">見積書管理画面</h1>
           <form onSubmit={handleLogin}>
             <input
               type="password"
@@ -233,20 +253,20 @@ export default function InvoicesAdmin() {
         {navigationMenu}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">請求書管理</h1>
+            <h1 className="text-3xl font-bold text-gray-900">見積書管理</h1>
             <button
-              onClick={() => setShowNewInvoiceForm(!showNewInvoiceForm)}
+              onClick={() => setShowNewEstimateForm(!showNewEstimateForm)}
               className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
             >
-              新規請求書作成
+              新規見積書作成
             </button>
           </div>
 
-          {/* 新規請求書フォーム */}
-          {showNewInvoiceForm && (
+          {/* 新規見積書フォーム */}
+          {showNewEstimateForm && (
             <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-              <h2 className="text-xl font-bold mb-4">新規請求書</h2>
-              <form onSubmit={createInvoice}>
+              <h2 className="text-xl font-bold mb-4">新規見積書</h2>
+              <form onSubmit={createEstimate}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -254,8 +274,8 @@ export default function InvoicesAdmin() {
                     </label>
                     <input
                       type="text"
-                      value={newInvoice.clientName}
-                      onChange={(e) => setNewInvoice({...newInvoice, clientName: e.target.value})}
+                      value={newEstimate.clientName}
+                      onChange={(e) => setNewEstimate({...newEstimate, clientName: e.target.value})}
                       className="w-full p-2 border border-gray-300 rounded-md"
                       required
                     />
@@ -266,8 +286,8 @@ export default function InvoicesAdmin() {
                     </label>
                     <input
                       type="email"
-                      value={newInvoice.clientEmail}
-                      onChange={(e) => setNewInvoice({...newInvoice, clientEmail: e.target.value})}
+                      value={newEstimate.clientEmail}
+                      onChange={(e) => setNewEstimate({...newEstimate, clientEmail: e.target.value})}
                       className="w-full p-2 border border-gray-300 rounded-md"
                     />
                   </div>
@@ -279,8 +299,8 @@ export default function InvoicesAdmin() {
                   </label>
                   <input
                     type="text"
-                    value={newInvoice.clientAddress}
-                    onChange={(e) => setNewInvoice({...newInvoice, clientAddress: e.target.value})}
+                    value={newEstimate.clientAddress}
+                    onChange={(e) => setNewEstimate({...newEstimate, clientAddress: e.target.value})}
                     className="w-full p-2 border border-gray-300 rounded-md"
                     required
                   />
@@ -288,12 +308,12 @@ export default function InvoicesAdmin() {
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    支払期限
+                    有効期限
                   </label>
                   <input
                     type="date"
-                    value={newInvoice.dueDate}
-                    onChange={(e) => setNewInvoice({...newInvoice, dueDate: e.target.value})}
+                    value={newEstimate.validUntil}
+                    onChange={(e) => setNewEstimate({...newEstimate, validUntil: e.target.value})}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -303,13 +323,13 @@ export default function InvoicesAdmin() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     明細項目
                   </label>
-                  {newInvoice.items.map((item, index) => (
+                  {newEstimate.items.map((item, index) => (
                     <div key={index} className="flex gap-2 mb-2">
                       <input
                         type="text"
                         placeholder="項目名"
                         value={item.description}
-                        onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
+                        onChange={(e) => updateEstimateItem(index, 'description', e.target.value)}
                         className="flex-1 p-2 border border-gray-300 rounded-md"
                         required
                       />
@@ -317,7 +337,7 @@ export default function InvoicesAdmin() {
                         type="number"
                         placeholder="数量"
                         value={item.quantity}
-                        onChange={(e) => updateInvoiceItem(index, 'quantity', parseInt(e.target.value))}
+                        onChange={(e) => updateEstimateItem(index, 'quantity', parseInt(e.target.value))}
                         className="w-20 p-2 border border-gray-300 rounded-md"
                         min="1"
                         required
@@ -326,15 +346,15 @@ export default function InvoicesAdmin() {
                         type="number"
                         placeholder="単価"
                         value={item.unitPrice}
-                        onChange={(e) => updateInvoiceItem(index, 'unitPrice', parseInt(e.target.value))}
+                        onChange={(e) => updateEstimateItem(index, 'unitPrice', parseInt(e.target.value))}
                         className="w-32 p-2 border border-gray-300 rounded-md"
                         min="0"
                         required
                       />
-                      {newInvoice.items.length > 1 && (
+                      {newEstimate.items.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeInvoiceItem(index)}
+                          onClick={() => removeEstimateItem(index)}
                           className="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
                         >
                           削除
@@ -344,7 +364,7 @@ export default function InvoicesAdmin() {
                   ))}
                   <button
                     type="button"
-                    onClick={addInvoiceItem}
+                    onClick={addEstimateItem}
                     className="mt-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
                   >
                     項目を追加
@@ -372,8 +392,8 @@ export default function InvoicesAdmin() {
                     備考
                   </label>
                   <textarea
-                    value={newInvoice.notes}
-                    onChange={(e) => setNewInvoice({...newInvoice, notes: e.target.value})}
+                    value={newEstimate.notes}
+                    onChange={(e) => setNewEstimate({...newEstimate, notes: e.target.value})}
                     className="w-full p-2 border border-gray-300 rounded-md"
                     rows={3}
                   />
@@ -385,11 +405,11 @@ export default function InvoicesAdmin() {
                     disabled={loading}
                     className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
                   >
-                    {loading ? '作成中...' : '請求書を作成'}
+                    {loading ? '作成中...' : '見積書を作成'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowNewInvoiceForm(false)}
+                    onClick={() => setShowNewEstimateForm(false)}
                     className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition"
                   >
                     キャンセル
@@ -399,12 +419,12 @@ export default function InvoicesAdmin() {
             </div>
           )}
 
-          {/* 請求書一覧 */}
-          {loading && !showNewInvoiceForm ? (
+          {/* 見積書一覧 */}
+          {loading && !showNewEstimateForm ? (
             <div className="text-center py-8 text-gray-500">読み込み中...</div>
-          ) : invoices.length === 0 ? (
+          ) : estimates.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              請求書がありません
+              見積書がありません
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -412,7 +432,7 @@ export default function InvoicesAdmin() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      請求書番号
+                      見積番号
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       顧客名
@@ -421,7 +441,7 @@ export default function InvoicesAdmin() {
                       発行日
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      支払期限
+                      有効期限
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       金額
@@ -435,52 +455,54 @@ export default function InvoicesAdmin() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice.id}>
+                  {estimates.map((estimate) => (
+                    <tr key={estimate.id}>
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {invoice.invoiceNumber}
+                        {estimate.estimateNumber}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {invoice.clientName}
+                        {estimate.clientName}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {format(new Date(invoice.issueDate), 'yyyy/MM/dd', { locale: ja })}
+                        {format(new Date(estimate.issueDate), 'yyyy/MM/dd', { locale: ja })}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {format(new Date(invoice.dueDate), 'yyyy/MM/dd', { locale: ja })}
+                        {format(new Date(estimate.validUntil), 'yyyy/MM/dd', { locale: ja })}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        ¥{invoice.total.toLocaleString()}
+                        ¥{estimate.total.toLocaleString()}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <select
-                          value={invoice.status}
-                          onChange={(e) => updateInvoiceStatus(invoice.id, e.target.value)}
+                          value={estimate.status}
+                          onChange={(e) => updateEstimateStatus(estimate.id, e.target.value)}
                           className={`text-sm rounded-full px-3 py-1 ${
-                            invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            invoice.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                            invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
+                            estimate.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                            estimate.status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                            estimate.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            estimate.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
                           }`}
                         >
                           <option value="draft">下書き</option>
                           <option value="sent">送信済み</option>
-                          <option value="paid">支払済み</option>
-                          <option value="overdue">期限超過</option>
+                          <option value="accepted">承認済み</option>
+                          <option value="rejected">却下</option>
+                          <option value="expired">期限切れ</option>
                         </select>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <button
-                          onClick={() => setEditingInvoice(invoice)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          編集
-                        </button>
-                        <button
-                          onClick={() => generateInvoicePDF(invoice)}
+                          onClick={() => generateEstimatePDF(estimate)}
                           className="text-indigo-600 hover:text-indigo-900 mr-3"
                         >
                           PDF出力
+                        </button>
+                        <button
+                          onClick={() => convertToInvoice(estimate)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          請求書へ
                         </button>
                       </td>
                     </tr>
@@ -488,15 +510,6 @@ export default function InvoicesAdmin() {
                 </tbody>
               </table>
             </div>
-          )}
-
-          {/* 編集モーダル */}
-          {editingInvoice && (
-            <InvoiceEditModal
-              invoice={editingInvoice}
-              onClose={() => setEditingInvoice(null)}
-              onSave={handleEditSave}
-            />
           )}
         </div>
       </div>

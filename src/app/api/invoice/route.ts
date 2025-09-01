@@ -138,7 +138,7 @@ export async function POST(request: Request) {
   }
 }
 
-// 請求書更新（ステータス変更など）
+// 請求書更新（全体更新またはステータス変更）
 export async function PUT(request: Request) {
   try {
     // 認証チェック
@@ -151,7 +151,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { id, status } = body
+    const { id, status, ...updateData } = body
 
     const invoiceIndex = invoices.findIndex(inv => inv.id === id)
     if (invoiceIndex === -1) {
@@ -161,11 +161,19 @@ export async function PUT(request: Request) {
       )
     }
 
-    // ステータス更新
-    invoices[invoiceIndex] = {
-      ...invoices[invoiceIndex],
-      status: status || invoices[invoiceIndex].status,
-      updatedAt: new Date().toISOString()
+    // 全体更新（編集モーダルから）
+    if (updateData.clientName) {
+      invoices[invoiceIndex] = {
+        ...body,
+        updatedAt: new Date().toISOString()
+      }
+    } else {
+      // ステータスのみ更新
+      invoices[invoiceIndex] = {
+        ...invoices[invoiceIndex],
+        status: status || invoices[invoiceIndex].status,
+        updatedAt: new Date().toISOString()
+      }
     }
 
     return NextResponse.json({
