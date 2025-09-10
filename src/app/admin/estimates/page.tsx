@@ -187,6 +187,8 @@ export default function EstimatesAdmin() {
   const convertToInvoice = async (estimate: Estimate) => {
     if (confirm('この見積書を請求書に変換しますか？')) {
       try {
+        console.log('Converting estimate to invoice:', estimate)
+        
         const response = await fetch('/api/invoice', {
           method: 'POST',
           headers: {
@@ -197,15 +199,24 @@ export default function EstimatesAdmin() {
             clientName: estimate.clientName,
             clientAddress: estimate.clientAddress,
             clientEmail: estimate.clientEmail,
-            items: estimate.items,
+            items: estimate.items.map(item => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice
+            })),
             dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             notes: `見積書番号 ${estimate.estimateNumber} から作成`
           })
         })
+        
         const data = await response.json()
+        console.log('Invoice creation response:', data)
+        
         if (data.success) {
-          alert('請求書を作成しました')
+          alert(`請求書を作成しました\n請求書番号: ${data.invoice?.invoiceNumber}`)
           router.push('/admin/invoices')
+        } else {
+          alert(`エラー: ${data.error || '請求書の作成に失敗しました'}`)
         }
       } catch (error) {
         console.error('Failed to convert to invoice:', error)

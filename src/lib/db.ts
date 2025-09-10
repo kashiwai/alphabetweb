@@ -202,6 +202,15 @@ export async function getInvoices() {
       args: [invoice.id as string]
     })
     
+    // 明細もカラム名を変換
+    const formattedItems = items.rows.map((item: any) => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      amount: item.amount
+    }))
+    
     // カラム名をキャメルケースに変換
     invoicesWithItems.push({
       id: invoice.id,
@@ -218,7 +227,7 @@ export async function getInvoices() {
       status: invoice.status,
       createdAt: invoice.created_at,
       updatedAt: invoice.updated_at,
-      items: items.rows
+      items: formattedItems
     })
   }
   
@@ -299,6 +308,15 @@ export async function getEstimates() {
       args: [estimate.id as string]
     })
     
+    // 明細もカラム名を変換
+    const formattedItems = items.rows.map((item: any) => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      amount: item.amount
+    }))
+    
     // カラム名をキャメルケースに変換
     estimatesWithItems.push({
       id: estimate.id,
@@ -315,7 +333,7 @@ export async function getEstimates() {
       status: estimate.status,
       createdAt: estimate.created_at,
       updatedAt: estimate.updated_at,
-      items: items.rows
+      items: formattedItems
     })
   }
   
