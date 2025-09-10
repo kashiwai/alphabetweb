@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { db, saveInvoice, getInvoices, updateInvoiceStatus } from '@/lib/db'
 
 // 請求書データの型定義
 export interface InvoiceData {
@@ -27,27 +28,16 @@ export interface InvoiceItem {
   amount: number
 }
 
-// メモリ内ストレージ（本番環境では適切なデータベースを使用）
-let invoices: InvoiceData[] = []
-
 // 請求書一覧取得
 export async function GET(request: Request) {
   try {
-    // 認証チェック
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.ADMIN_API_KEY || 'dev-api-key'}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
+    const invoices = await getInvoices()
+    
     return NextResponse.json({
       success: true,
       invoices: invoices,
       total: invoices.length
     })
-
   } catch (error) {
     console.error('Error fetching invoices:', error)
     return NextResponse.json(
@@ -60,15 +50,6 @@ export async function GET(request: Request) {
 // 請求書作成
 export async function POST(request: Request) {
   try {
-    // 認証チェック
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.ADMIN_API_KEY || 'dev-api-key'}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const body = await request.json()
     const { clientName, clientAddress, clientEmail, items, dueDate, notes } = body
 
@@ -87,15 +68,17 @@ export async function POST(request: Request) {
     const tax = Math.round(subtotal * 0.1) // 10%消費税
     const total = subtotal + tax
 
-    // 請求書番号を生成
-    const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(invoices.length + 1).padStart(4, '0')}`
+    // 現在の請求書数を取得して番号を生成
+    const existingInvoices = await getInvoices()
+    const invoiceCount = existingInvoices.length + 1
+    const invoiceNumber = `INV-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(invoiceCount).padStart(4, '0')}`
 
     // 請求書データを作成
     const invoice: InvoiceData = {
       id: `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       invoiceNumber,
       issueDate: new Date().toISOString(),
-      dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // デフォルト30日後
+      dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       clientName,
       clientAddress,
       clientEmail,
@@ -115,13 +98,8 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString()
     }
 
-    // 保存
-    invoices.push(invoice)
-
-    // Vercel環境の場合はログに記録
-    if (process.env.VERCEL === '1') {
-      console.log('New invoice created:', JSON.stringify(invoice, null, 2))
-    }
+    // データベースに保存
+    await saveInvoice(invoice)
 
     return NextResponse.json({
       success: true,
@@ -138,48 +116,24 @@ export async function POST(request: Request) {
   }
 }
 
-// 請求書更新（全体更新またはステータス変更）
+// 請求書更新
 export async function PUT(request: Request) {
   try {
-    // 認証チェック
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.ADMIN_API_KEY || 'dev-api-key'}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const body = await request.json()
-    const { id, status, ...updateData } = body
+    const { id, status } = body
 
-    const invoiceIndex = invoices.findIndex(inv => inv.id === id)
-    if (invoiceIndex === -1) {
+    if (!id || !status) {
       return NextResponse.json(
-        { error: '請求書が見つかりません' },
-        { status: 404 }
+        { error: '必須パラメータが不足しています' },
+        { status: 400 }
       )
     }
 
-    // 全体更新（編集モーダルから）
-    if (updateData.clientName) {
-      invoices[invoiceIndex] = {
-        ...body,
-        updatedAt: new Date().toISOString()
-      }
-    } else {
-      // ステータスのみ更新
-      invoices[invoiceIndex] = {
-        ...invoices[invoiceIndex],
-        status: status || invoices[invoiceIndex].status,
-        updatedAt: new Date().toISOString()
-      }
-    }
+    await updateInvoiceStatus(id, status)
 
     return NextResponse.json({
       success: true,
-      message: '請求書を更新しました',
-      invoice: invoices[invoiceIndex]
+      message: '請求書のステータスを更新しました'
     })
 
   } catch (error) {
