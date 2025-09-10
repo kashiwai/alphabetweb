@@ -449,10 +449,10 @@ export default function InvoicesAdmin() {
                         {invoice.clientName}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {invoice.issueDate ? format(new Date(invoice.issueDate || invoice.issue_date), 'yyyy/MM/dd', { locale: ja }) : '-'}
+                        {invoice.issueDate ? format(new Date(invoice.issueDate), 'yyyy/MM/dd', { locale: ja }) : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {invoice.dueDate ? format(new Date(invoice.dueDate || invoice.due_date), 'yyyy/MM/dd', { locale: ja }) : '-'}
+                        {invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy/MM/dd', { locale: ja }) : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                         ¥{invoice.total.toLocaleString()}

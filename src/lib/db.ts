@@ -202,8 +202,22 @@ export async function getInvoices() {
       args: [invoice.id as string]
     })
     
+    // カラム名をキャメルケースに変換
     invoicesWithItems.push({
-      ...invoice,
+      id: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      clientName: invoice.client_name,
+      clientAddress: invoice.client_address,
+      clientEmail: invoice.client_email,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      total: invoice.total,
+      notes: invoice.notes,
+      status: invoice.status,
+      createdAt: invoice.created_at,
+      updatedAt: invoice.updated_at,
       items: items.rows
     })
   }
@@ -285,8 +299,22 @@ export async function getEstimates() {
       args: [estimate.id as string]
     })
     
+    // カラム名をキャメルケースに変換
     estimatesWithItems.push({
-      ...estimate,
+      id: estimate.id,
+      estimateNumber: estimate.estimate_number,
+      issueDate: estimate.issue_date,
+      validUntil: estimate.valid_until,
+      clientName: estimate.client_name,
+      clientAddress: estimate.client_address,
+      clientEmail: estimate.client_email,
+      subtotal: estimate.subtotal,
+      tax: estimate.tax,
+      total: estimate.total,
+      notes: estimate.notes,
+      status: estimate.status,
+      createdAt: estimate.created_at,
+      updatedAt: estimate.updated_at,
       items: items.rows
     })
   }

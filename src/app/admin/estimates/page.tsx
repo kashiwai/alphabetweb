@@ -464,10 +464,10 @@ export default function EstimatesAdmin() {
                         {estimate.clientName}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {estimate.issueDate ? format(new Date(estimate.issueDate || estimate.issue_date), 'yyyy/MM/dd', { locale: ja }) : '-'}
+                        {estimate.issueDate ? format(new Date(estimate.issueDate), 'yyyy/MM/dd', { locale: ja }) : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {estimate.validUntil ? format(new Date(estimate.validUntil || estimate.valid_until), 'yyyy/MM/dd', { locale: ja }) : '-'}
+                        {estimate.validUntil ? format(new Date(estimate.validUntil), 'yyyy/MM/dd', { locale: ja }) : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                         ¥{estimate.total.toLocaleString()}
